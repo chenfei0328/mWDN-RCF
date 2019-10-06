@@ -74,12 +74,12 @@ class mWDN_RCF(nn.Module):
         # self.mWDN3_H.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(self.input_size_3, False))))
         # self.mWDN3_L.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(self.input_size_3, True))))
 
-        self.cmp_mWDN1_H = torch.from_numpy(self.create_W(input_size, False, is_cmp=True))
-        self.cmp_mWDN1_L = torch.from_numpy(self.create_W(input_size, True, is_cmp=True))
-        self.cmp_mWDN2_H = torch.from_numpy(self.create_W(self.input_size_2, False, is_cmp=True))
-        self.cmp_mWDN2_L = torch.from_numpy(self.create_W(self.input_size_2, True, is_cmp=True))
-        self.cmp_mWDN3_H = torch.from_numpy(self.create_W(self.input_size_3, False, is_cmp=True))
-        self.cmp_mWDN3_L = torch.from_numpy(self.create_W(self.input_size_3, True, is_cmp=True))
+        self.cmp_mWDN1_H = torch.from_numpy(self.create_W(input_size, False, is_cmp=True)).float()
+        self.cmp_mWDN1_L = torch.from_numpy(self.create_W(input_size, True, is_cmp=True)).float()
+        self.cmp_mWDN2_H = torch.from_numpy(self.create_W(self.input_size_2, False, is_cmp=True)).float()
+        self.cmp_mWDN2_L = torch.from_numpy(self.create_W(self.input_size_2, True, is_cmp=True)).float()
+        self.cmp_mWDN3_H = torch.from_numpy(self.create_W(self.input_size_3, False, is_cmp=True)).float()
+        self.cmp_mWDN3_L = torch.from_numpy(self.create_W(self.input_size_3, True, is_cmp=True)).float()
 
         self.mWDN1_H.weight = nn.Parameter(torch.from_numpy(self.create_W(input_size, False)).float())
         self.mWDN1_L.weight = nn.Parameter(torch.from_numpy(self.create_W(input_size, True)).float())
@@ -94,7 +94,7 @@ class mWDN_RCF(nn.Module):
         for k in range(num_blocks):
             layers.append(block(inputs, channels[k], stride))
             inputs = channels[k]
-        layers.append(nn.Conv1d(channels[k], 1, kernel_size=1, stride=stride, bias=False))
+        layers.append(nn.Conv1d(channels[-1], 1, kernel_size=1, stride=stride, bias=False))
         layers.append(nn.AdaptiveAvgPool1d(self.output_size))
         return nn.Sequential(*layers)
 
