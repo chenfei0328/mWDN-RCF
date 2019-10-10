@@ -60,19 +60,6 @@ class mWDN_RCF(nn.Module):
         # self.phi_layer2 = self.make_layer(ResidualBlock, 3, self.input_size_2)
         # self.phi_layer3 = self.make_layer(ResidualBlock, 3, self.input_size_3)
 
-        # self.cmp_mWDN1_H = Variable(torch.DoubleTensor(self.create_W(input_size, False, is_cmp=True)))
-        # self.cmp_mWDN1_L = Variable(torch.DoubleTensor(self.create_W(input_size, True, is_cmp=True)))
-        # self.cmp_mWDN2_H = Variable(torch.DoubleTensor(self.create_W(self.input_size_2, False, is_cmp=True)))
-        # self.cmp_mWDN2_L = Variable(torch.DoubleTensor(self.create_W(self.input_size_2, True, is_cmp=True)))
-        # self.cmp_mWDN3_H = Variable(torch.DoubleTensor(self.create_W(self.input_size_3, False, is_cmp=True)))
-        # self.cmp_mWDN3_L = Variable(torch.DoubleTensor(self.create_W(self.input_size_3, True, is_cmp=True)))
-        #
-        # self.mWDN1_H.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(input_size, False))))
-        # self.mWDN1_L.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(input_size, True))))
-        # self.mWDN2_H.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(self.input_size_2, False))))
-        # self.mWDN2_L.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(self.input_size_2, True))))
-        # self.mWDN3_H.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(self.input_size_3, False))))
-        # self.mWDN3_L.weight = nn.Parameter(Variable(torch.DoubleTensor(self.create_W(self.input_size_3, True))))
 
         self.cmp_mWDN1_H = torch.from_numpy(self.create_W(input_size, False, is_cmp=True)).float()
         self.cmp_mWDN1_L = torch.from_numpy(self.create_W(input_size, True, is_cmp=True)).float()
@@ -81,16 +68,23 @@ class mWDN_RCF(nn.Module):
         self.cmp_mWDN3_H = torch.from_numpy(self.create_W(self.input_size_3, False, is_cmp=True)).float()
         self.cmp_mWDN3_L = torch.from_numpy(self.create_W(self.input_size_3, True, is_cmp=True)).float()
 
-        self.mWDN1_H.weight = nn.Parameter(torch.from_numpy(self.create_W(input_size, False)).float())
-        self.mWDN1_L.weight = nn.Parameter(torch.from_numpy(self.create_W(input_size, True)).float())
-        self.mWDN2_H.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, False)).float())
-        self.mWDN2_L.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, True)).float())
-        self.mWDN3_H.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, False)).float())
-        self.mWDN3_L.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, True)).float())
+        self.mWDN1_H.weight = nn.Parameter(torch.from_numpy(self.create_W(input_size, False)).float(), requires_grad=True)
+        self.mWDN1_L.weight = nn.Parameter(torch.from_numpy(self.create_W(input_size, True)).float(), requires_grad=True)
+        self.mWDN2_H.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, False)).float(), requires_grad=True)
+        self.mWDN2_L.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, True)).float(), requires_grad=True)
+        self.mWDN3_H.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, False)).float(), requires_grad=True)
+        self.mWDN3_L.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, True)).float(), requires_grad=True)
+
+        # self.mWDN1_H.weight.data = nn.Parameter(torch.from_numpy(self.create_W(input_size, False)).float())
+        # self.mWDN1_L.weight.data = nn.Parameter(torch.from_numpy(self.create_W(input_size, True)).float())
+        # self.mWDN2_H.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, False)).float())
+        # self.mWDN2_L.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, True)).float())
+        # self.mWDN3_H.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, False)).float())
+        # self.mWDN3_L.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, True)).float())
 
     def make_layer(self, block, num_blocks, inputs, stride=1):
         layers = []
-        channels = [64, 128, 128]
+        channels = [4, 16, 16]
         for k in range(num_blocks):
             layers.append(block(inputs, channels[k], stride))
             inputs = channels[k]

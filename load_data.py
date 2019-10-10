@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 ROOT_DIR = '/home/ych/Downloads/UCRArchive_2018/'
-TS_NAME = 'Adiac'
+TS_NAME = 'Computers'
 
 def read_data():
     root_dir, ts_name = ROOT_DIR, TS_NAME
@@ -21,3 +21,7 @@ def read_data():
 
 if __name__ == '__main__':
     x_train, y_train, x_test, y_test = read_data()
+    print(np.any(np.isnan(x_train)))
+    print(np.any(np.isnan(y_train)))
+    print(np.any(np.isnan(x_test)))
+    print(np.any(np.isnan(y_test)))
