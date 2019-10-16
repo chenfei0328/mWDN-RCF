@@ -1,20 +1,19 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 import numpy as np
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super(ResidualBlock, self).__init__()
         self.left = nn.Sequential(
-            nn.Conv1d(in_channels, out_channels, kernel_size=8, padding=4, stride=stride, bias=False),
+            nn.Conv1d(in_channels, out_channels, kernel_size=9, padding=4, stride=stride, bias=False),
             nn.BatchNorm1d(out_channels),
             nn.ReLU(inplace=True),
             nn.Conv1d(out_channels, out_channels, kernel_size=5, padding=2, stride=stride, bias=False),
             nn.BatchNorm1d(out_channels),
             nn.ReLU(inplace=True),
-            nn.Conv1d(out_channels, out_channels, kernel_size=2, padding=0, stride=stride, bias=False),
+            nn.Conv1d(out_channels, out_channels, kernel_size=3, padding=1, stride=stride, bias=False),
             nn.BatchNorm1d(out_channels)
         )
         self.shortcut = nn.Sequential()
@@ -56,11 +55,6 @@ class mWDN_RCF(nn.Module):
         self.phi_layer2 = self.make_layer(ResidualBlock, 3, 1)
         self.phi_layer3 = self.make_layer(ResidualBlock, 3, 1)
 
-        # self.phi_layer1 = self.make_layer(ResidualBlock, 3, input_size)
-        # self.phi_layer2 = self.make_layer(ResidualBlock, 3, self.input_size_2)
-        # self.phi_layer3 = self.make_layer(ResidualBlock, 3, self.input_size_3)
-
-
         self.cmp_mWDN1_H = torch.from_numpy(self.create_W(input_size, False, is_cmp=True)).float()
         self.cmp_mWDN1_L = torch.from_numpy(self.create_W(input_size, True, is_cmp=True)).float()
         self.cmp_mWDN2_H = torch.from_numpy(self.create_W(self.input_size_2, False, is_cmp=True)).float()
@@ -75,13 +69,6 @@ class mWDN_RCF(nn.Module):
         self.mWDN3_H.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, False)).float(), requires_grad=True)
         self.mWDN3_L.weight = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, True)).float(), requires_grad=True)
 
-        # self.mWDN1_H.weight.data = nn.Parameter(torch.from_numpy(self.create_W(input_size, False)).float())
-        # self.mWDN1_L.weight.data = nn.Parameter(torch.from_numpy(self.create_W(input_size, True)).float())
-        # self.mWDN2_H.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, False)).float())
-        # self.mWDN2_L.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_2, True)).float())
-        # self.mWDN3_H.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, False)).float())
-        # self.mWDN3_L.weight.data = nn.Parameter(torch.from_numpy(self.create_W(self.input_size_3, True)).float())
-
     def make_layer(self, block, num_blocks, inputs, stride=1):
         layers = []
         channels = [4, 16, 16]
@@ -93,31 +80,33 @@ class mWDN_RCF(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, input):
-        #print(input.shape) torch.Size([16, 176])
-        a1_H = self.sigmoid(self.mWDN1_H(input)).unsqueeze(1)
-        a1_L = self.sigmoid(self.mWDN1_L(input)).unsqueeze(1)
-        #print(a1_H.shape) torch.Size([16, 1, 176]) unsqueeze(n)在n维上增加维度，squeeze(n)在n维上消去维度，这里是池化需要增加一个通道的维度
-        x1_H = self.a_to_x(a1_H).squeeze(1)
-        x1_L = self.a_to_x(a1_L).squeeze(1)
-        #print(x1_H.shape) torch.Size([16, 88])
-        #print(torch.cat((x1_H, x1_L), 1).unsqueeze(1).shape) torch.Size([16, 1, 176])
-        u1 = self.phi_layer1(torch.cat((x1_H, x1_L), 1).unsqueeze(1)).squeeze(1)
-        #print(u1.shape) torch.Size([16, 37])
-        c1 = F.softmax(u1, dim=1) #新版本建议加dim
-        #print(c1.shape) torch.Size([16, 37])
-        a2_H = self.sigmoid(self.mWDN2_H(x1_L)).unsqueeze(1)
-        a2_L = self.sigmoid(self.mWDN2_L(x1_L)).unsqueeze(1)
-        x2_H = self.a_to_x(a2_H).squeeze(1)
-        x2_L = self.a_to_x(a2_L).squeeze(1)
-        u2 = c1 + F.softmax(self.phi_layer2(torch.cat((x2_H, x2_L), 1).unsqueeze(1)).squeeze(1), dim=1)
-        c2 = F.softmax(u2, dim=1)
+        input = input.view(input.size(0), 1, -1)
+        # input: torch.Size([32, 1, 720])
+        # a1_H: batch_size*seq_len*hidden_size, torch.Size([32, 1, 720])
+        a1_H = self.sigmoid(self.mWDN1_H(input))
+        a1_L = self.sigmoid(self.mWDN1_L(input))
+        # unsqueeze(n)在n维上增加维度，squeeze(n)在n维上消去维度，这里是池化需要增加一个通道的维度
+        # x1_H: batch_size*seq_len*(hidden_size / 2)
+        x1_H = self.a_to_x(a1_H)
+        x1_L = self.a_to_x(a1_L)
+        # torch.cat((x1_H, x1_L), 1): batch_size*seq_len*hidden_size
+        # u1: batch_size*seq_len*hidden_size
+        u1 = self.phi_layer1(torch.cat((x1_H, x1_L), 2))
+        c1 = F.softmax(u1, dim=2) #新版本建议加dim
 
-        a3_H = self.sigmoid(self.mWDN3_H(x2_L)).unsqueeze(1)
-        a3_L = self.sigmoid(self.mWDN3_L(x2_L)).unsqueeze(1)
-        x3_H = self.a_to_x(a3_H).squeeze(1)
-        x3_L = self.a_to_x(a3_L).squeeze(1)
-        u3 = c2 + F.softmax(self.phi_layer3(torch.cat((x3_H, x3_L), 1).unsqueeze(1)).squeeze(1), dim=1)
-        c3 = F.softmax(u3, dim=1)
+        a2_H = self.sigmoid(self.mWDN2_H(x1_L))
+        a2_L = self.sigmoid(self.mWDN2_L(x1_L))
+        x2_H = self.a_to_x(a2_H)
+        x2_L = self.a_to_x(a2_L)
+        u2 = c1 + F.softmax(self.phi_layer2(torch.cat((x2_H, x2_L), 2)), dim=1)
+        c2 = F.softmax(u2, dim=2)
+
+        a3_H = self.sigmoid(self.mWDN3_H(x2_L))
+        a3_L = self.sigmoid(self.mWDN3_L(x2_L))
+        x3_H = self.a_to_x(a3_H)
+        x3_L = self.a_to_x(a3_L)
+        u3 = c2 + F.softmax(self.phi_layer3(torch.cat((x3_H, x3_L), 2)), dim=1)
+        c3 = F.softmax(u3, dim=2)
 
         return c1, c2, c3
 
@@ -145,5 +134,5 @@ class mWDN_RCF(nn.Module):
 
 
 if __name__ == '__main__':
-    net = mWDN_RCF(64, 16)
+    net = mWDN_RCF(64, 2)
     print(net)

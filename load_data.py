@@ -1,8 +1,9 @@
 import numpy as np
+import copy
 import os
 
 ROOT_DIR = '/home/ych/Downloads/UCRArchive_2018/'
-TS_NAME = 'Computers'
+TS_NAME = 'Yoga'
 
 def read_data():
     root_dir, ts_name = ROOT_DIR, TS_NAME
@@ -19,9 +20,28 @@ def read_data():
 
     return input_train, label_train, input_test, label_test
 
+def redefine_category(label):
+    category2real = {}
+    real2category = {}
+    label = np.sort(np.unique(label))
+    class_num = len(label)
+    for k in range(class_num):
+        category2real[k] = label[k]
+        real2category[label[k]] = k
+    return category2real, real2category
+
+def transform_category(label, real2category):
+    transformed_label = copy.deepcopy(label)
+    for k in range(len(label)):
+        transformed_label[k] = real2category[label[k]]
+    return transformed_label
+
 if __name__ == '__main__':
     x_train, y_train, x_test, y_test = read_data()
-    print(np.any(np.isnan(x_train)))
-    print(np.any(np.isnan(y_train)))
-    print(np.any(np.isnan(x_test)))
-    print(np.any(np.isnan(y_test)))
+    category2real, real2category = redefine_category(y_train)
+    transformed_label = transform_category(y_train, real2category)
+
+    # print(np.any(np.isnan(x_train)))
+    # print(np.any(np.isnan(y_train)))
+    # print(np.any(np.isnan(x_test)))
+    # print(np.any(np.isnan(y_test)))
